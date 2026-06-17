@@ -102,6 +102,19 @@ Sitewide and category galleries are built from live Discourse post/upload data
 and use cursor pagination rather than exact counts. This avoids maintaining a
 separate gallery index while keeping the first implementation small.
 
+The live query approach has been smoke-tested on a Discourse site with roughly
+39,000 topics, 361,000 posts, 67,000 uploads, and 50,000 post image references
+above the configured minimum image size. On that dataset, warm JSON requests for
+the first page of the sitewide gallery returned in about one second, with
+category and topic galleries in the same range. A cold sitewide request can be
+slower because the database still has to find, rank, and deduplicate eligible
+post image references before returning the first page.
+
+Forums with substantially larger image histories, for example hundreds of
+thousands of post image references, should validate the query on their own data.
+Cursor pagination keeps page traversal stable and avoids expensive exact counts,
+but it does not replace the ranking work needed to build the gallery page.
+
 For very large forums, a future implementation could add a precomputed gallery
 index table populated by jobs/hooks when posts and uploads change.
 
