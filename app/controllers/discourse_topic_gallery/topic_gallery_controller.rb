@@ -8,7 +8,12 @@ module DiscourseTopicGallery
 
     # Serves the Ember app shell for direct browser visits.
     def page
-      gallery_context
+      context = gallery_context
+      if params[:category_slug_path].present?
+        redirect_to "/gallery/c/#{context.category.slug}/#{context.category.id}"
+        return
+      end
+
       render html: "".html_safe
     end
 

@@ -79,6 +79,29 @@ after_initialize do
   # All routes use /gallery/ prefix — no conflict with Discourse's /t/ catch-all,
   # so no need to prepend. HTML routes serve the Ember app shell; JSON routes
   # return gallery data.
+  Discourse::Application.routes.prepend do
+    constraints(->(req) { !req.path.end_with?(".json") }) do
+      get "c/*category_slug_path/:category_id/gallery" =>
+            "discourse_topic_gallery/topic_gallery#page",
+          :constraints => {
+            category_id: /\d+/,
+          },
+          :defaults => {
+            gallery_scope: "category",
+          }
+    end
+
+    get "c/*category_slug_path/:category_id/gallery" =>
+          "discourse_topic_gallery/topic_gallery#show",
+        :constraints => {
+          category_id: /\d+/,
+        },
+        :defaults => {
+          format: :json,
+          gallery_scope: "category",
+        }
+  end
+
   Discourse::Application.routes.append do
     # HTML routes (Ember app shell)
     constraints(->(req) { !req.path.end_with?(".json") }) do

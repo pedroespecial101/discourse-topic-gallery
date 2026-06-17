@@ -77,6 +77,24 @@ describe "TopicGalleryController" do
       ids = response.parsed_body["images"].map { |i| i["id"] }
       expect(ids).to include(child_upload.id)
     end
+
+    it "supports JSON requests from category URLs with /gallery appended" do
+      get "/c/the-garage/#{category.slug}/#{category.id}/gallery.json"
+
+      json = response.parsed_body
+      expect(json["scope"]).to eq("category")
+      expect(json["categoryId"]).to eq(category.id)
+    end
+  end
+
+  describe "GET /c/*category_path/:category_id/gallery (HTML)" do
+    it "redirects normal category gallery URLs to the canonical gallery route" do
+      sign_in(user)
+
+      get "/c/the-garage/#{category.slug}/#{category.id}/gallery"
+
+      expect(response).to redirect_to("/gallery/c/#{category.slug}/#{category.id}")
+    end
   end
 
   describe "GET /topic-gallery/:topic_id" do
