@@ -38,6 +38,41 @@ describe "TopicGalleryController" do
       expect(json["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
     end
 
+    it "paginates latest images with a stable cursor" do
+      shared_created_at = Time.zone.now.change(usec: 0)
+      created_refs =
+        31.times.map do
+          extra_post =
+            Fabricate(
+              :post,
+              topic: topic,
+              user: user,
+              created_at: shared_created_at,
+            )
+          extra_upload = Fabricate(:upload, user: user, width: 800, height: 600)
+          UploadReference.create!(target: extra_post, upload: extra_upload)
+          extra_upload
+        end
+
+      expected_extra_ids = created_refs.reverse.map(&:id)
+
+      get "/gallery.json"
+
+      first_page = response.parsed_body
+      first_page_ids = first_page["images"].map { |image| image["id"] }
+      expect(first_page_ids).to eq(expected_extra_ids.first(30))
+      expect(first_page["hasMore"]).to eq(true)
+      expect(first_page["nextCursor"]).to be_present
+
+      get "/gallery.json", params: { cursor: first_page["nextCursor"] }
+
+      second_page = response.parsed_body
+      second_page_ids = second_page["images"].map { |image| image["id"] }
+      expect(second_page_ids).to eq(expected_extra_ids.drop(30) + [upload2.id, upload1.id])
+      expect(first_page_ids & second_page_ids).to be_empty
+      expect(second_page["hasMore"]).to eq(false)
+    end
+
     it "excludes images from restricted categories" do
       restricted_group = Fabricate(:group)
       restricted_category = Fabricate(:private_category, group: restricted_group)
@@ -76,6 +111,20 @@ describe "TopicGalleryController" do
 
       ids = response.parsed_body["images"].map { |i| i["id"] }
       expect(ids).to include(child_upload.id)
+    end
+
+    it "excludes subcategories when disabled" do
+      SiteSetting.topic_gallery_category_include_subcategories = false
+      child_category = Fabricate(:category, parent_category_id: category.id)
+      child_topic = Fabricate(:topic, category: child_category)
+      child_post = Fabricate(:post, topic: child_topic, user: user, created_at: Time.zone.now)
+      child_upload = Fabricate(:upload, user: user, width: 800, height: 600)
+      UploadReference.create!(target: child_post, upload: child_upload)
+
+      get "/gallery/c/#{category.slug}/#{category.id}.json"
+
+      ids = response.parsed_body["images"].map { |i| i["id"] }
+      expect(ids).not_to include(child_upload.id)
     end
 
     it "supports JSON requests from category URLs with /gallery appended" do
