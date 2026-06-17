@@ -88,12 +88,13 @@ describe "TopicGalleryController" do
   end
 
   describe "GET /c/*category_path/:category_id/gallery (HTML)" do
-    it "redirects normal category gallery URLs to the canonical gallery route" do
+    it "serves the Ember app shell for normal category URLs with /gallery appended" do
       sign_in(user)
 
       get "/c/the-garage/#{category.slug}/#{category.id}/gallery"
 
-      expect(response).to redirect_to("/gallery/c/#{category.slug}/#{category.id}")
+      expect(response.status).to eq(200)
+      expect(response.media_type).to eq("text/html")
     end
   end
 

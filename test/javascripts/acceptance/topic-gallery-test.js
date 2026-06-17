@@ -55,6 +55,20 @@ acceptance("Topic Gallery", function (needs) {
         metadataSettings: {},
       })
     );
+
+    server.get("/c/the-garage/technical/10/gallery.json", () =>
+      helper.response({
+        scope: "category",
+        categoryId: 10,
+        categorySlug: "technical",
+        scopeTitle: "Technical",
+        scopeUrl: "/c/the-garage/technical/10",
+        images: [],
+        hasMore: false,
+        nextCursor: null,
+        metadataSettings: {},
+      })
+    );
   });
 
   test("visiting the gallery route displays the topic title", async function (assert) {
@@ -86,5 +100,11 @@ acceptance("Topic Gallery", function (needs) {
     await visit("/gallery/c/general/10");
 
     assert.dom(".topic-gallery-page h1").hasText("General");
+  });
+
+  test("visiting a category URL with gallery appended displays the category title", async function (assert) {
+    await visit("/c/the-garage/technical/10/gallery");
+
+    assert.dom(".topic-gallery-page h1").hasText("Technical");
   });
 });
