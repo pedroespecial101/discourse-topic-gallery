@@ -28,6 +28,9 @@ plugins:
   topic_gallery_show_topic_title:
     default: true
     client: true
+  topic_gallery_topic_title_links_to_post:
+    default: false
+    client: true
   topic_gallery_show_category:
     default: true
     client: true

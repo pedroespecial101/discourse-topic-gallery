@@ -1,6 +1,6 @@
 en:
   site_settings:
-    topic_gallery_enabled: "Enable the topic gallery plugin."
+    topic_gallery_enabled: "Enable the topic gallery plugin. Gallery pages are available at /gallery for the whole site, /gallery/c/:category-slug/:category-id for a category, and /gallery/:topic-slug/:topic-id for a topic."
     topic_gallery_allowed_groups: "Groups that are allowed to access the topic gallery."
     topic_gallery_minimum_image_size: "Minimum width and height (in pixels) for images to appear in the gallery. Images smaller than this in either dimension are excluded."
     topic_gallery_excluded_categories: "Categories where the topic gallery is disabled. Topics in these categories will not show gallery buttons or the gallery page."
@@ -8,6 +8,7 @@ en:
     topic_gallery_show_author: "Show the post author in gallery metadata."
     topic_gallery_show_post_date: "Show the post date in gallery metadata."
     topic_gallery_show_topic_title: "Show topic titles in gallery metadata."
+    topic_gallery_topic_title_links_to_post: "Make topic title links in gallery metadata open the specific post instead of the start of the topic."
     topic_gallery_show_category: "Show categories in gallery metadata."
     topic_gallery_show_post_link: "Show post numbers and links in gallery metadata."
     topic_gallery_show_image_details: "Show image dimensions and file size in gallery details."

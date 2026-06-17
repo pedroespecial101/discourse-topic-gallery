@@ -302,6 +302,18 @@ describe "TopicGalleryController" do
         expect(image).not_to have_key("filesize")
       end
 
+      it "can make topic title links point to the specific post" do
+        SiteSetting.topic_gallery_show_post_link = false
+        SiteSetting.topic_gallery_topic_title_links_to_post = true
+
+        get "/topic-gallery/#{topic.id}.json"
+
+        image = response.parsed_body["images"].find { |i| i["id"] == upload1.id }
+        expect(image["topicTitle"]).to eq(topic.title)
+        expect(image["topicUrl"]).to eq("/t/#{topic.slug}/#{topic.id}/1")
+        expect(image).not_to have_key("postUrl")
+      end
+
       it "returns empty images for page beyond results" do
         get "/topic-gallery/#{topic.id}.json", params: { page: 100 }
 

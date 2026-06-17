@@ -367,6 +367,7 @@ module DiscourseTopicGallery
             postId: ref.post_id,
             topicId: ref.topic_id,
           }
+          post_url = "/t/#{ref.topic_slug}/#{ref.topic_id}/#{ref.post_number}"
 
           if SiteSetting.topic_gallery_show_author
             user = users[ref.post_user_id]
@@ -378,12 +379,17 @@ module DiscourseTopicGallery
 
           if SiteSetting.topic_gallery_show_post_link
             image[:postNumber] = ref.post_number
-            image[:postUrl] = "/t/#{ref.topic_slug}/#{ref.topic_id}/#{ref.post_number}"
+            image[:postUrl] = post_url
           end
 
           if SiteSetting.topic_gallery_show_topic_title
             image[:topicTitle] = ref.topic_title
-            image[:topicUrl] = "/t/#{ref.topic_slug}/#{ref.topic_id}"
+            image[:topicUrl] =
+              if SiteSetting.topic_gallery_topic_title_links_to_post
+                post_url
+              else
+                "/t/#{ref.topic_slug}/#{ref.topic_id}"
+              end
           end
 
           if SiteSetting.topic_gallery_show_category && ref.category_id
