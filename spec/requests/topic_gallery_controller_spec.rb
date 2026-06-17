@@ -38,6 +38,15 @@ describe "TopicGalleryController" do
       expect(json["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
     end
 
+    it "returns 404 when the user is not in an allowed group" do
+      group = Fabricate(:group)
+      SiteSetting.topic_gallery_allowed_groups = group.id.to_s
+
+      get "/gallery.json"
+
+      expect(response.status).to eq(404)
+    end
+
     it "paginates latest images with a stable cursor" do
       shared_created_at = Time.zone.now.change(usec: 0)
       created_refs =
@@ -86,6 +95,27 @@ describe "TopicGalleryController" do
       ids = response.parsed_body["images"].map { |i| i["id"] }
       expect(ids).not_to include(restricted_upload.id)
     end
+
+    it "excludes images from private messages" do
+      private_topic = Fabricate(:private_message_topic, user: user)
+      private_post = Fabricate(:post, topic: private_topic, user: user)
+      private_upload = Fabricate(:upload, user: user, width: 800, height: 600)
+      UploadReference.create!(target: private_post, upload: private_upload)
+
+      get "/gallery.json"
+
+      ids = response.parsed_body["images"].map { |i| i["id"] }
+      expect(ids).not_to include(private_upload.id)
+    end
+
+    it "excludes images from excluded categories" do
+      SiteSetting.topic_gallery_excluded_categories = category.id.to_s
+
+      get "/gallery.json"
+
+      ids = response.parsed_body["images"].map { |i| i["id"] }
+      expect(ids).not_to include(upload1.id, upload2.id)
+    end
   end
 
   describe "GET /gallery/c/:slug/:category_id.json" do
@@ -98,6 +128,23 @@ describe "TopicGalleryController" do
       expect(json["scope"]).to eq("category")
       expect(json["categoryId"]).to eq(category.id)
       expect(json["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
+    end
+
+    it "returns 404 when the user is not in an allowed group" do
+      group = Fabricate(:group)
+      SiteSetting.topic_gallery_allowed_groups = group.id.to_s
+
+      get "/gallery/c/#{category.slug}/#{category.id}.json"
+
+      expect(response.status).to eq(404)
+    end
+
+    it "returns 404 for an excluded category" do
+      SiteSetting.topic_gallery_excluded_categories = category.id.to_s
+
+      get "/gallery/c/#{category.slug}/#{category.id}.json"
+
+      expect(response.status).to eq(404)
     end
 
     it "includes subcategories by default" do

@@ -2,7 +2,7 @@
 
 Adds image gallery pages to Discourse using images attached to visible posts.
 
-The plugin keeps the original per-topic gallery and also supports latest-image
+The plugin keeps the original per-topic gallery and also supports latest image
 galleries for a whole site or a category.
 
 ![topic gallery](https://d11a6trkgmumsb.cloudfront.net/original/4X/2/6/c/26cd39b7206c407d0f8dc10040e212686823603d.jpeg)
@@ -10,16 +10,16 @@ galleries for a whole site or a category.
 ## Features
 
 - Topic galleries for images posted in one topic.
-- Sitewide latest-image gallery.
-- Category latest-image gallery, with optional subcategory inclusion.
+- Sitewide latest image gallery.
+- Category latest image gallery, with optional subcategory inclusion.
 - Latest-first ordering by post date and post/upload reference.
 - Cursor pagination for sitewide, category, and topic galleries.
 - Deduplication so one upload appears once, linked to its latest visible post.
 - Filters by username and post date range in all scopes.
 - Optional topic-only filter by starting post number.
 - Admin settings for displayed metadata.
-- Respects Discourse visibility rules for topics, posts, categories, whispers,
-  ignored users, and excluded categories.
+- Respects Discourse visibility rules for topics, posts, categories, private
+  messages, whispers, ignored users, and excluded categories.
 
 ## Gallery URLs
 
@@ -85,6 +85,25 @@ Category galleries include direct child categories by default. Disable
 selected category.
 
 Use `topic_gallery_minimum_image_size` to exclude small images such as icons.
+
+## Visibility and access
+
+Gallery pages only include uploads from posts the current visitor is allowed to
+see. Hidden and deleted posts are excluded, private messages are excluded from
+sitewide and category galleries, and private or excluded categories are not
+included. Logged-in users do not see images from users they have ignored.
+
+Use `topic_gallery_allowed_groups` if gallery discovery should be limited to
+staff or another group.
+
+## Performance
+
+Sitewide and category galleries are built from live Discourse post/upload data
+and use cursor pagination rather than exact counts. This avoids maintaining a
+separate gallery index while keeping the first implementation small.
+
+For very large forums, a future implementation could add a precomputed gallery
+index table populated by jobs/hooks when posts and uploads change.
 
 ## Installation
 
