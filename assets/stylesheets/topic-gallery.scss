@@ -240,6 +240,10 @@
 
     .gallery-meta {
       display: none;
+      gap: 0.35em;
+      min-height: 1.4em;
+      font-size: var(--font-down-1);
+      line-height: 1.35;
 
       @include viewport.from(md) {
         display: flex;
@@ -248,13 +252,33 @@
         visibility: hidden;
       }
 
-      a {
+      a,
+      span {
         color: var(--primary);
         text-decoration: none;
       }
 
-      .gallery-post-link {
+      a + a::before,
+      a + span::before,
+      span + a::before,
+      span + span::before {
+        content: "·";
         color: var(--primary-medium);
+        margin-right: 0.35em;
+      }
+
+      .gallery-post-link,
+      .gallery-post-date,
+      .gallery-category {
+        color: var(--primary-medium);
+      }
+
+      .gallery-topic-link {
+        flex-basis: 100%;
+        color: var(--primary-high);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
         &:hover,
         &:focus {

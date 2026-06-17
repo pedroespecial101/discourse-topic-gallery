@@ -12,19 +12,27 @@ export default class TopicGalleryController extends Controller {
   @tracked images = [];
   @tracked hasMore = false;
   @tracked isLoading = false;
-  @tracked total = 0;
+  @tracked total = null;
   @tracked postsCount = 0;
+  @tracked scope = "topic";
+  @tracked scopeTitle = "";
+  @tracked scopeUrl = "";
   @tracked title = "";
   @tracked slug = "";
+  @tracked topicId = null;
+  @tracked categoryId = null;
   @tracked username = "";
   @tracked from_date = "";
   @tracked to_date = "";
   @tracked post_number = "";
   @tracked filtersVisible = false;
+  @tracked metadataSettings = {};
 
   queryParams = ["username", "post_number"];
+  apiPath = "";
+  pagePath = "";
   page = 0;
-  topicId = null;
+  nextCursor = null;
   _fetchId = 0;
   _filterTimer = null;
 
@@ -36,8 +44,7 @@ export default class TopicGalleryController extends Controller {
   _syncUrl() {
     const params = this._filterParams;
     const qs = params.toString();
-    const path = `/gallery/${this.slug}/${this.topicId}${qs ? `?${qs}` : ""}`;
-    window.history.replaceState(null, "", path);
+    window.history.replaceState(null, "", `${this.pagePath}${qs ? `?${qs}` : ""}`);
   }
 
   async _fetchAndSyncUrl() {
@@ -46,8 +53,8 @@ export default class TopicGalleryController extends Controller {
   }
 
   setupModel(model) {
-    this.topicId = model.id;
-    this.slug = model.slug;
+    this.apiPath = model.apiPath;
+    this.pagePath = model.pagePath;
     this.from_date = model.from_date || "";
     this.to_date = model.to_date || "";
     this._applyResult(model.result);
@@ -56,10 +63,18 @@ export default class TopicGalleryController extends Controller {
   _applyResult(result) {
     this.images = result.images;
     this.hasMore = result.hasMore;
-    this.page = result.page;
-    this.total = result.total;
-    this.postsCount = result.postsCount;
-    this.title = result.title;
+    this.nextCursor = result.nextCursor;
+    this.page = result.page || 0;
+    this.total = result.total ?? null;
+    this.postsCount = result.postsCount || 0;
+    this.scope = result.scope || "topic";
+    this.scopeTitle = result.scopeTitle || result.title || "";
+    this.scopeUrl = result.scopeUrl || "";
+    this.title = result.title || this.scopeTitle;
+    this.slug = result.slug || "";
+    this.topicId = result.topicId || result.id || null;
+    this.categoryId = result.categoryId || null;
+    this.metadataSettings = result.metadataSettings || {};
     this.isLoading = false;
   }
 
@@ -74,19 +89,19 @@ export default class TopicGalleryController extends Controller {
     if (this.to_date) {
       params.set("to_date", this.to_date);
     }
-    if (this.hasPostNumberFilter) {
+    if (this.showPostNumberFilter && this.hasPostNumberFilter) {
       params.set("post_number", this.post_number);
     }
     return params;
   }
 
-  buildApiUrl(page) {
+  buildApiUrl(cursor = null) {
     const params = this._filterParams;
-    if (page > 0) {
-      params.set("page", page);
+    if (cursor) {
+      params.set("cursor", cursor);
     }
     const qs = params.toString();
-    return `/topic-gallery/${this.topicId}${qs ? `?${qs}` : ""}`;
+    return `${this.apiPath}${qs ? `?${qs}` : ""}`;
   }
 
   async fetchImages() {
@@ -94,7 +109,7 @@ export default class TopicGalleryController extends Controller {
     this.isLoading = true;
 
     try {
-      const result = await ajax(this.buildApiUrl(0));
+      const result = await ajax(this.buildApiUrl());
       if (fetchId !== this._fetchId) {
         return;
       }
@@ -113,18 +128,19 @@ export default class TopicGalleryController extends Controller {
 
   @action
   async loadMore() {
-    if (this.isLoading || !this.hasMore) {
+    if (this.isLoading || !this.hasMore || !this.nextCursor) {
       return;
     }
 
     this.isLoading = true;
 
     try {
-      const result = await ajax(this.buildApiUrl(this.page + 1));
+      const result = await ajax(this.buildApiUrl(this.nextCursor));
       this.images = [...this.images, ...result.images];
       this.hasMore = result.hasMore;
-      this.page = result.page;
-      this.total = result.total;
+      this.nextCursor = result.nextCursor;
+      this.page = result.page || this.page + 1;
+      this.total = result.total ?? this.total;
     } catch (error) {
       popupAjaxError(error);
     } finally {
@@ -132,8 +148,24 @@ export default class TopicGalleryController extends Controller {
     }
   }
 
+  get showPostNumberFilter() {
+    return this.scope === "topic";
+  }
+
+  get hasKnownTotal() {
+    return this.total !== null && this.total !== undefined;
+  }
+
+  get hasScopeBackLink() {
+    return this.scope !== "site" && this.scopeUrl;
+  }
+
   get hasPostNumberFilter() {
     return this.post_number && parseInt(this.post_number, 10) > 1;
+  }
+
+  get showPostNumberChip() {
+    return this.showPostNumberFilter && this.hasPostNumberFilter;
   }
 
   get hasFilters() {
@@ -141,7 +173,7 @@ export default class TopicGalleryController extends Controller {
       this.username ||
       this.from_date ||
       this.to_date ||
-      this.hasPostNumberFilter
+      (this.showPostNumberFilter && this.hasPostNumberFilter)
     );
   }
 
@@ -155,7 +187,7 @@ export default class TopicGalleryController extends Controller {
   }
 
   @action
-  navigateToTopic(event) {
+  navigateToScope(event) {
     event.preventDefault();
     this.router.transitionTo(event.currentTarget.getAttribute("href"));
   }

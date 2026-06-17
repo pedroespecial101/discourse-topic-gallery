@@ -6,7 +6,8 @@ describe "TopicGalleryController" do
   fab!(:user)
   fab!(:admin)
   fab!(:other_user, :user)
-  fab!(:topic) { Fabricate(:topic, user: user) }
+  fab!(:category)
+  fab!(:topic) { Fabricate(:topic, user: user, category: category) }
 
   fab!(:post1) { Fabricate(:post, topic: topic, user: user, post_number: 1) }
   fab!(:post2) { Fabricate(:post, topic: topic, user: other_user, post_number: 2) }
@@ -17,8 +18,65 @@ describe "TopicGalleryController" do
   before do
     SiteSetting.topic_gallery_enabled = true
     SiteSetting.topic_gallery_allowed_groups = Group::AUTO_GROUPS[:everyone]
+    post1.update!(created_at: 2.days.ago)
+    post2.update!(created_at: 1.day.ago)
     UploadReference.create!(target: post1, upload: upload1)
     UploadReference.create!(target: post2, upload: upload2)
+  end
+
+  describe "GET /gallery.json" do
+    before { sign_in(user) }
+
+    it "returns latest visible images sitewide" do
+      get "/gallery.json"
+
+      json = response.parsed_body
+      expect(json["scope"]).to eq("site")
+      expect(json["scopeTitle"]).to be_present
+      expect(json["total"]).to be_nil
+      expect(json["nextCursor"]).to be_nil
+      expect(json["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
+    end
+
+    it "excludes images from restricted categories" do
+      restricted_group = Fabricate(:group)
+      restricted_category = Fabricate(:private_category, group: restricted_group)
+      restricted_topic = Fabricate(:topic, category: restricted_category)
+      restricted_post = Fabricate(:post, topic: restricted_topic, user: other_user)
+      restricted_upload = Fabricate(:upload, user: other_user, width: 800, height: 600)
+      UploadReference.create!(target: restricted_post, upload: restricted_upload)
+
+      get "/gallery.json"
+
+      ids = response.parsed_body["images"].map { |i| i["id"] }
+      expect(ids).not_to include(restricted_upload.id)
+    end
+  end
+
+  describe "GET /gallery/c/:slug/:category_id.json" do
+    before { sign_in(user) }
+
+    it "returns latest images for the category" do
+      get "/gallery/c/#{category.slug}/#{category.id}.json"
+
+      json = response.parsed_body
+      expect(json["scope"]).to eq("category")
+      expect(json["categoryId"]).to eq(category.id)
+      expect(json["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
+    end
+
+    it "includes subcategories by default" do
+      child_category = Fabricate(:category, parent_category_id: category.id)
+      child_topic = Fabricate(:topic, category: child_category)
+      child_post = Fabricate(:post, topic: child_topic, user: user, created_at: Time.zone.now)
+      child_upload = Fabricate(:upload, user: user, width: 800, height: 600)
+      UploadReference.create!(target: child_post, upload: child_upload)
+
+      get "/gallery/c/#{category.slug}/#{category.id}.json"
+
+      ids = response.parsed_body["images"].map { |i| i["id"] }
+      expect(ids).to include(child_upload.id)
+    end
   end
 
   describe "GET /topic-gallery/:topic_id" do
@@ -182,8 +240,10 @@ describe "TopicGalleryController" do
         get "/topic-gallery/#{topic.id}.json"
 
         json = response.parsed_body
+        expect(json["scope"]).to eq("topic")
         expect(json["id"]).to eq(topic.id)
         expect(json["title"]).to eq(topic.title)
+        expect(json["scopeTitle"]).to eq(topic.title)
         expect(json["slug"]).to eq(topic.slug)
         expect(json["total"]).to eq(2)
         expect(json["page"]).to eq(0)
@@ -197,11 +257,49 @@ describe "TopicGalleryController" do
         expect(image["width"]).to eq(800)
         expect(image["height"]).to eq(600)
         expect(image["postNumber"]).to eq(1)
+        expect(image["postCreatedAt"]).to be_present
         expect(image["username"]).to eq(user.username)
         expect(image["postUrl"]).to eq("/t/#{topic.slug}/#{topic.id}/1")
+        expect(image["topicTitle"]).to eq(topic.title)
+        expect(image["category"]["name"]).to eq(category.name)
         expect(image["url"]).to be_present
         expect(image["thumbnailUrl"]).to be_present
         expect(image["downloadUrl"]).to be_present
+      end
+
+      it "orders images latest first" do
+        get "/topic-gallery/#{topic.id}.json"
+
+        expect(response.parsed_body["images"].map { |i| i["id"] }).to eq([upload2.id, upload1.id])
+      end
+
+      it "uses the latest visible post when deduplicating uploads" do
+        UploadReference.create!(target: post2, upload: upload1)
+
+        get "/topic-gallery/#{topic.id}.json"
+
+        image = response.parsed_body["images"].find { |i| i["id"] == upload1.id }
+        expect(image["postId"]).to eq(post2.id)
+        expect(image["postNumber"]).to eq(2)
+      end
+
+      it "respects metadata display settings" do
+        SiteSetting.topic_gallery_show_author = false
+        SiteSetting.topic_gallery_show_post_date = false
+        SiteSetting.topic_gallery_show_topic_title = false
+        SiteSetting.topic_gallery_show_category = false
+        SiteSetting.topic_gallery_show_post_link = false
+        SiteSetting.topic_gallery_show_image_details = false
+
+        get "/topic-gallery/#{topic.id}.json"
+
+        image = response.parsed_body["images"].first
+        expect(image).not_to have_key("username")
+        expect(image).not_to have_key("postCreatedAt")
+        expect(image).not_to have_key("topicTitle")
+        expect(image).not_to have_key("category")
+        expect(image).not_to have_key("postUrl")
+        expect(image).not_to have_key("filesize")
       end
 
       it "returns empty images for page beyond results" do

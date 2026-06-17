@@ -19,3 +19,23 @@ plugins:
   topic_gallery_post_menu_button:
     default: true
     client: true
+  topic_gallery_show_author:
+    default: true
+    client: true
+  topic_gallery_show_post_date:
+    default: true
+    client: true
+  topic_gallery_show_topic_title:
+    default: true
+    client: true
+  topic_gallery_show_category:
+    default: true
+    client: true
+  topic_gallery_show_post_link:
+    default: true
+    client: true
+  topic_gallery_show_image_details:
+    default: true
+    client: true
+  topic_gallery_category_include_subcategories:
+    default: true

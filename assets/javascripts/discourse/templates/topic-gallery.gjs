@@ -11,16 +11,26 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
   <div class="topic-gallery-page">
     <div class="topic-gallery-header">
       <h1 data-topic-id={{@controller.topicId}}>
-        <a
-          href="/t/{{@controller.slug}}/{{@controller.topicId}}"
-          class="topic-back-link"
-          {{on "click" @controller.navigateToTopic}}
-        >{{icon "chevron-left"}}{{@controller.title}}</a>
+        {{#if @controller.hasScopeBackLink}}
+          <a
+            href={{@controller.scopeUrl}}
+            class="topic-back-link"
+            {{on "click" @controller.navigateToScope}}
+          >{{icon "chevron-left"}}{{@controller.scopeTitle}}</a>
+        {{else}}
+          {{@controller.scopeTitle}}
+        {{/if}}
       </h1>
       <span class="image-count-badge">
-        -
-        {{@controller.total}}
-        {{i18n "discourse_topic_gallery.images"}}</span>
+        {{#if @controller.hasKnownTotal}}
+          -
+          {{@controller.total}}
+          {{i18n "discourse_topic_gallery.images"}}
+        {{else}}
+          -
+          {{i18n "discourse_topic_gallery.latest_images"}}
+        {{/if}}
+      </span>
       <DButton
         @action={{@controller.toggleFilters}}
         @icon={{if @controller.filtersVisible "chevron-up" "sliders"}}
@@ -31,7 +41,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
         }}
       />
     </div>
-    {{#if @controller.hasPostNumberFilter}}
+    {{#if @controller.showPostNumberChip}}
       <div class="post-number-chip">
         <span>{{i18n
             "discourse_topic_gallery.from_post"
@@ -65,20 +75,22 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
         />
       </div>
 
-      <div class="control-group">
-        <label class="control-label">{{i18n
-            "discourse_topic_gallery.from_post_label"
-            count=@controller.postsCount
-          }}</label>
-        <input
-          type="number"
-          min="1"
-          max={{@controller.postsCount}}
-          class="post-number-input"
-          value={{@controller.post_number}}
-          {{on "change" @controller.updatePostNumber}}
-        />
-      </div>
+      {{#if @controller.showPostNumberFilter}}
+        <div class="control-group">
+          <label class="control-label">{{i18n
+              "discourse_topic_gallery.from_post_label"
+              count=@controller.postsCount
+            }}</label>
+          <input
+            type="number"
+            min="1"
+            max={{@controller.postsCount}}
+            class="post-number-input"
+            value={{@controller.post_number}}
+            {{on "change" @controller.updatePostNumber}}
+          />
+        </div>
+      {{/if}}
 
       <div class="control-group">
         <label class="control-label">{{i18n
@@ -115,6 +127,7 @@ import TopicGalleryGrid from "../components/topic-gallery-grid";
       @hasMore={{@controller.hasMore}}
       @isLoading={{@controller.isLoading}}
       @loadMore={{@controller.loadMore}}
+      @metadataSettings={{@controller.metadataSettings}}
     />
   </div>
 </template>

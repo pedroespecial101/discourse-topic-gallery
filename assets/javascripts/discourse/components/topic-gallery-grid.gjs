@@ -5,6 +5,7 @@ import { modifier } from "ember-modifier";
 import ConditionalLoadingSpinner from "discourse/components/conditional-loading-spinner";
 import { helperContext } from "discourse/lib/helpers";
 import DiscourseURL from "discourse/lib/url";
+import formatDate from "discourse/ui-kit/helpers/d-format-date";
 import { i18n } from "discourse-i18n";
 import PhotoSwipe from "../lib/photoswipe";
 import PhotoSwipeLightbox from "../lib/photoswipe-lightbox";
@@ -76,6 +77,9 @@ function initGridLightbox(gridElement, { onLastSlide }) {
   });
 
   lb.on("uiRegister", () => {
+    const escapeHtml = (text) =>
+      text.replace(/[<>&"]/g, (c) => `&#${c.charCodeAt(0)};`);
+
     lb.pswp.ui.registerElement({
       name: "custom-counter",
       order: 6,
@@ -141,13 +145,33 @@ function initGridLightbox(gridElement, { onLastSlide }) {
               if (card) {
                 const username = card.querySelector(".mention")?.textContent;
                 const postLink = card.querySelector(".gallery-post-link");
-                if (username && postLink) {
-                  const postNumber = postLink.textContent;
-                  const postUrl = postLink.getAttribute("href");
+                const postDate =
+                  card.querySelector(".gallery-post-date")?.textContent;
+                const topicLink = card.querySelector(".gallery-topic-link");
+                const category = card.querySelector(".gallery-category");
+                const postBits = [username, postDate, category?.textContent]
+                  .filter(Boolean)
+                  .join(" · ");
+
+                if (postBits || postLink || topicLink) {
+                  const postInfoBits = [];
+                  if (postBits) {
+                    postInfoBits.push(escapeHtml(postBits));
+                  }
+                  if (topicLink) {
+                    postInfoBits.push(escapeHtml(topicLink.textContent));
+                  }
+                  if (postLink) {
+                    const postNumber = postLink.textContent;
+                    const postUrl = postLink.getAttribute("href");
+                    postInfoBits.push(
+                      `<a href="${postUrl}" class="pswp__caption-post-link">${postNumber}</a>`
+                    );
+                  }
+
                   const postInfo =
                     `<span class='pswp__caption-post'>` +
-                    `${username} ` +
-                    `<a href="${postUrl}" class="pswp__caption-post-link">${postNumber}</a>` +
+                    postInfoBits.join(" · ") +
                     `</span>`;
                   titleHtml = titleHtml ? `${titleHtml} ${postInfo}` : postInfo;
                 }
@@ -362,6 +386,7 @@ export default class TopicGalleryGrid extends Component {
               <a
                 href={{image.url}}
                 class="lightbox image-preview-link"
+                title={{image.topicTitle}}
                 data-download-href={{image.downloadUrl}}
                 data-target-width={{image.width}}
                 data-target-height={{image.height}}
@@ -376,20 +401,56 @@ export default class TopicGalleryGrid extends Component {
                     {{on "error" this.stopShimmer}}
                   />
                 </span>
-                <span class="informations">{{image.width}}×{{image.height}}
-                  {{image.filesize}}</span>
+                {{#if @metadataSettings.showImageDetails}}
+                  <span class="informations">{{image.width}}×{{image.height}}
+                    {{image.filesize}}</span>
+                {{/if}}
               </a>
               <div class="gallery-meta">
-                <a
-                  href="/u/{{image.username}}"
-                  data-user-card={{image.username}}
-                  class="mention"
-                >@{{image.username}}</a>
-                &nbsp;-&nbsp;
-                <a
-                  href={{image.postUrl}}
-                  class="gallery-post-link"
-                >#{{image.postNumber}}</a>
+                {{#if @metadataSettings.showAuthor}}
+                  {{#if image.username}}
+                    <a
+                      href="/u/{{image.username}}"
+                      data-user-card={{image.username}}
+                      class="mention"
+                    >@{{image.username}}</a>
+                  {{/if}}
+                {{/if}}
+
+                {{#if @metadataSettings.showPostDate}}
+                  {{#if image.postCreatedAt}}
+                    <span class="gallery-post-date">{{formatDate
+                        image.postCreatedAt
+                      }}</span>
+                  {{/if}}
+                {{/if}}
+
+                {{#if @metadataSettings.showPostLink}}
+                  {{#if image.postUrl}}
+                    <a
+                      href={{image.postUrl}}
+                      class="gallery-post-link"
+                    >#{{image.postNumber}}</a>
+                  {{/if}}
+                {{/if}}
+
+                {{#if @metadataSettings.showTopicTitle}}
+                  {{#if image.topicUrl}}
+                    <a
+                      href={{image.topicUrl}}
+                      class="gallery-topic-link"
+                    >{{image.topicTitle}}</a>
+                  {{/if}}
+                {{/if}}
+
+                {{#if @metadataSettings.showCategory}}
+                  {{#if image.category}}
+                    <a
+                      href={{image.category.url}}
+                      class="gallery-category"
+                    >{{image.category.name}}</a>
+                  {{/if}}
+                {{/if}}
               </div>
             </div>
           {{/each}}

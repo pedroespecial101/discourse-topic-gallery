@@ -13,14 +13,46 @@ acceptance("Topic Gallery", function (needs) {
 
     server.get("/topic-gallery/:topic_id", () =>
       helper.response({
+        scope: "topic",
         id: 280,
+        topicId: 280,
         title: "Internationalization / localization",
+        scopeTitle: "Internationalization / localization",
+        scopeUrl: "/t/internationalization-localization/280",
         slug: "internationalization-localization",
         images: [],
         page: 0,
         hasMore: false,
+        nextCursor: null,
         total: 0,
         postsCount: 20,
+        metadataSettings: {},
+      })
+    );
+
+    server.get("/gallery.json", () =>
+      helper.response({
+        scope: "site",
+        scopeTitle: "Latest images",
+        scopeUrl: "/gallery",
+        images: [],
+        hasMore: false,
+        nextCursor: null,
+        metadataSettings: {},
+      })
+    );
+
+    server.get("/gallery/c/general/10.json", () =>
+      helper.response({
+        scope: "category",
+        categoryId: 10,
+        categorySlug: "general",
+        scopeTitle: "General",
+        scopeUrl: "/c/general/10",
+        images: [],
+        hasMore: false,
+        nextCursor: null,
+        metadataSettings: {},
       })
     );
   });
@@ -42,5 +74,17 @@ acceptance("Topic Gallery", function (needs) {
     assert
       .dom(".topic-gallery-page h1")
       .hasText("Internationalization / localization");
+  });
+
+  test("visiting the site gallery route displays latest images", async function (assert) {
+    await visit("/gallery");
+
+    assert.dom(".topic-gallery-page h1").hasText("Latest images");
+  });
+
+  test("visiting the category gallery route displays the category title", async function (assert) {
+    await visit("/gallery/c/general/10");
+
+    assert.dom(".topic-gallery-page h1").hasText("General");
   });
 });

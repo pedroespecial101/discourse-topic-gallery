@@ -7,6 +7,7 @@ en:
   js:
     discourse_topic_gallery:
       images: "images in this gallery"
+      latest_images: "Latest images"
       filter_by_user: "User:"
       user_placeholder: "Search for a user..."
       from_post_label: "Post # of %{count}:"
@@ -17,5 +18,6 @@ en:
       filters_button: "Filters"
       clear_filters: "Clear"
       from_post: "From post #%{number}"
-      no_images_found: "No images found in this topic."
+      no_images_found: "No images found in this gallery."
       page_title: "Gallery - %{title}"
+      site_gallery_title: "Latest images"
